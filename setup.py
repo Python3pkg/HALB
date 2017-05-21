@@ -14,14 +14,14 @@ if platform.system() == 'Linux':
 		for package in packages:
 		        pkg = cache[package]
 		        if pkg.is_installed:
-                		print "%s is already installed" %(package)
+                		print("%s is already installed" %(package))
 		        else:
                 		pkg.mark_install()
 
 		try:
 		        cache.commit()
-		except Exception, arg:
-		        print >> sys.stderr, "Sorry, package installation failed [{err}]".format(err=str(arg))
+		except Exception as arg:
+		        print("Sorry, package installation failed [{err}]".format(err=str(arg)), file=sys.stderr)
 
 #If System is Centos/Redhat use YUM
 
@@ -33,15 +33,15 @@ if platform.system() == 'Linux':
 		#print installed
 		for package in packages:
 	        	if yb.rpmdb.searchNevra(name=package):
-        	        	print "%s is installed" %(package)
+        	        	print("%s is installed" %(package))
 		        else:
-        		        print "Installing %s" %(package)
+        		        print("Installing %s" %(package))
                 		yb.install(name=package)
 	                	yb.resolveDeps()
 		       	        yb.buildTransaction()
 			yb.processTransaction()
 else:
-	print "This system does not seems to be Linux, so exiting"
+	print("This system does not seems to be Linux, so exiting")
 
 ##################################################################################
 

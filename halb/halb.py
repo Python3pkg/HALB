@@ -1,7 +1,7 @@
-import shutil,re,os,pprint,commands
+import shutil,re,os,pprint,subprocess
 from time import strftime
 #from config import * 
-from ConfigParser import SafeConfigParser
+from configparser import SafeConfigParser
 
 parser = SafeConfigParser()
 parser.read('/etc/HALB/halb.conf')
@@ -131,7 +131,7 @@ def get_vip_data(vig_name):
 	   f_VIG.close()
 	   return vips
 	except IOError as e:
-                print "I/O error({0}): {1}".format(e.errno, e.strerror)
+                print("I/O error({0}): {1}".format(e.errno, e.strerror))
                 exit(2)
 ###########################################################
 def get_real_data(vig_name,vip_name):
@@ -164,20 +164,20 @@ def gen_conf (vig_name):
         binary=HA_BIN+"haproxy_"+vig_name
 	if not os.path.isfile(binary):
 		shutil.copy2(HAPROXY,binary)
-		print "The Haproxy binary for this vig is %s " %binary
+		print("The Haproxy binary for this vig is %s " %binary)
 	if os.path.isfile(cfg):
 		cfg_back=HA_CONF_BAK+vig_name+".cfg.bak"+strftime("%d-%b-%Y-%H-%M-%S")
 		shutil.copy2(cfg,cfg_back)
-		print "Preserved the backup of %s at %s" %(cfg,cfg_back)
+		print("Preserved the backup of %s at %s" %(cfg,cfg_back))
 	if os.path.isfile(HA_DAT+vig_name+".vig"):
-		print "Generating Configuration of %s at %s" % (vig_name,cfg) 
+		print("Generating Configuration of %s at %s" % (vig_name,cfg)) 
         	fo = open(cfg, "wb")
         	header=addheader(vig_name,auth='Super$ecRet')
         	fo.write(header);
-		print "Written Header section successfully"
+		print("Written Header section successfully")
         	vips=get_vip_data(vig_name)
 		for vip_name in vips:
-			print "\tAdding VIP section for %s" % (vip_name)
+			print("\tAdding VIP section for %s" % (vip_name))
 			vip_mode=vips[vip_name]["vip_mode"]
 			for mode in vip_mode.split(","):
 				vip_port = '443' if mode == 'https' else vips[vip_name]["vip_port"]
@@ -185,7 +185,7 @@ def gen_conf (vig_name):
         			fo.write(vip_block)
 				real=get_real_data(vig_name,vip_name)
 				for backend in real: 
-					print "\t\tAdding Backend %s for %s" % (backend,vip_name)
+					print("\t\tAdding Backend %s for %s" % (backend,vip_name))
 					oos=""
 					status=get_server_status(vig_name,backend)
 					if status == 'oos':
@@ -194,10 +194,10 @@ def gen_conf (vig_name):
 					backend_block=addbackend(oos,backend,real[backend]["ip"],real_port)
 	        			fo.write(backend_block)
 					update_status_file(vig_name,backend,status)
-		print "Completed."
+		print("Completed.")
         	fo.close()
 	else:
-		print "Error:vig file %s.vig does not exist." %(HA_DAT+vig_name)
+		print("Error:vig file %s.vig does not exist." %(HA_DAT+vig_name))
 	 	exit(2)
 ##########################################################
 def ha_vig_start(vig_name):
@@ -206,21 +206,21 @@ def ha_vig_start(vig_name):
 		pid="/var/run/"+vig_name+".pid"
 		ha_vig_configtest(vig_name)
 	        cmd=binary+" -D -f "+cfg+" -p "+pid
-		status, output = commands.getstatusoutput(cmd)
+		status, output = subprocess.getstatusoutput(cmd)
 		if not status == 0 :
-                       	print "Error starting the configuration %s" %(cfg)
+                       	print("Error starting the configuration %s" %(cfg))
 		else:
-			print "Haproxy Configuration started successfully."
+			print("Haproxy Configuration started successfully.")
 ##########################################################
 def ha_vig_stop(vig_name):
 	cmd="cat /var/run/"+vig_name+".pid | xargs kill"
-	print "Stopping the Haproxy Process for %s." %(vig_name)
-	status, output = commands.getstatusoutput(cmd)
+	print("Stopping the Haproxy Process for %s." %(vig_name))
+	status, output = subprocess.getstatusoutput(cmd)
 	if status == 0 :
 		os.remove("/var/run/"+vig_name+".pid")
-		print "Done"
+		print("Done")
 	else:
-		print "There seems to be problem Stopping Haproxy process for %s" %(vig_name)
+		print("There seems to be problem Stopping Haproxy process for %s" %(vig_name))
 	#print vig_name,command
 	
 ##########################################################
@@ -229,12 +229,12 @@ def ha_vig_configtest(vig_name):
         cfg=HA_CONF+vig_name+".cfg"
         pid="/var/run/"+vig_name+".pid"
 	cmd=binary+" -c -q -f "+cfg
-        status, output = commands.getstatusoutput(cmd)
+        status, output = subprocess.getstatusoutput(cmd)
         if not status == 0 :
-	        print "Errors in configuration file %s" %(cfg)
+	        print("Errors in configuration file %s" %(cfg))
 		exit
 	else:
-		print "Configtest Passed Successfully"
+		print("Configtest Passed Successfully")
 	return status	
 ##########################################################
 def ha_vig_reload(vig_name):
@@ -242,19 +242,19 @@ def ha_vig_reload(vig_name):
         cfg=HA_CONF+vig_name+".cfg"
         pid="/var/run/"+vig_name+".pid"
         ha_vig_configtest(vig_name)
-	print "Reloading the Haproxy Process for %s." %(vig_name)
+	print("Reloading the Haproxy Process for %s." %(vig_name))
         cmd=binary+" -D -f "+cfg+" -p "+pid+" -sf $(cat "+pid +")"
-	print "Reloading the Haproxy Process for %s." %(vig_name)
+	print("Reloading the Haproxy Process for %s." %(vig_name))
         if not status == 0 :
-           print "Error starting the configuration %s" %(cfg)
+           print("Error starting the configuration %s" %(cfg))
         else:
-     	   print "Done."
+     	   print("Done.")
 
 	
 ##########################################################
 def ha_vig_restart(vig_name):
 	ha_vig_configtest(vig_name)
-	print "Restarting the Haproxy Process for %s." %(vig_name)
+	print("Restarting the Haproxy Process for %s." %(vig_name))
 	ha_vig_stop(vig_name)
 	ha_vig_start(vig_name)
 ##########################################################
@@ -262,11 +262,11 @@ def ha_vig_status(vig_name):
 	cfg=HA_CONF+vig_name+".cfg"
 	pid="/var/run/"+vig_name+".pid"
 	cmd="pgrep -f " +pid+"$"
-	status, output = commands.getstatusoutput(cmd)
+	status, output = subprocess.getstatusoutput(cmd)
 	if not status == 0 :
-           print "Haproxy Process not running for %s" %(cfg)
+           print("Haproxy Process not running for %s" %(cfg))
         else:
-           print "Haproxy for %s is running (pid=%s)" %(vig_name,output)
+           print("Haproxy for %s is running (pid=%s)" %(vig_name,output))
 ##########################################################
 def keep_init_header(vig_name,state,vip_dev,virtual_router_id,priority):
 	header ="""
@@ -319,7 +319,7 @@ def find_virtual_router_id(vig_name):
 				id=i.split(',')[0]
 		f_VIG.close()
         except IOError as e:
-                print "I/O error({0}): {1}".format(e.errno, e.strerror)
+                print("I/O error({0}): {1}".format(e.errno, e.strerror))
                 exit(2)
         return id
 ##########################################################
@@ -333,20 +333,20 @@ def keep_init_gen (vig_name,state):
         if os.path.isfile(cfg):
                 cfg_back=cfg+".back-"+strftime("%d-%b-%Y-%H-%M-%S")
                 shutil.copy2(cfg,cfg_back)
-                print "Preserved the backup of %s at %s" %(cfg,cfg_back)
+                print("Preserved the backup of %s at %s" %(cfg,cfg_back))
 		virtual_router_id=find_virtual_router_id(vig_name)
                 fo = open(cfg, "a")
                 header=keep_init_header(vig_name,state,VIP_DEVICE,virtual_router_id,priority)
                 fo.write(header);
-                print "Written Header section successfully"
+                print("Written Header section successfully")
 		vips=get_vip_data(vig_name)
 		for vip_name in vips:
 			data="\t\t%s dev %s\n"%(vips[vip_name]["vip"],VIP_DEVICE)
 			fo.write(data);
-		print "Written VIP data successfully"
+		print("Written VIP data successfully")
                 footer=keep_init_footer(vig_name)
 		fo.write(footer)
-		print "Written Footer section successfully"
+		print("Written Footer section successfully")
 ##########################################################
 def is_valid_backend (vig_name,server):
         VIG=HA_DAT+vig_name+".vig"
@@ -358,7 +358,7 @@ def is_valid_backend (vig_name,server):
                                 present=True
                 f_VIG.close()
         except IOError as e:
-                print "I/O error({0}): {1}".format(e.errno, e.strerror)
+                print("I/O error({0}): {1}".format(e.errno, e.strerror))
                 exit(2)
 	return present
 ##########################################################
@@ -368,7 +368,7 @@ def change_status (vig_name,server,status):
 	if present :
 		update_status_file(vig_name,server,status)
 	else :
-		print "Server not present in VIG file"
+		print("Server not present in VIG file")
 #Done
 ##########################################################
 def update_status_file(vig_name,server,status):
@@ -377,16 +377,16 @@ def update_status_file(vig_name,server,status):
 
 	old_status = get_server_status(vig_name,server)
 	if old_status == status :
-		print "Server %s is already in %s state" %(server,status)
+		print("Server %s is already in %s state" %(server,status))
 	else :
 		status_file=HA_STATUS_DIR+vig_name+"/"+server
 		try:
         		status_f = open(status_file, "wb")
 			status_f.write(status)
-			print "Server %s is  set to %s" %(server,status)	
+			print("Server %s is  set to %s" %(server,status))	
         	        status_f.close()
 	        except IOError as e:
-        	        print "I/O error({0}): {1}".format(e.errno, e.strerror)
+        	        print("I/O error({0}): {1}".format(e.errno, e.strerror))
                 	exit(2)
         return True
 ##########################################################
@@ -400,7 +400,7 @@ def get_server_status(vig_name,server):
 	                status=line
                 status_f.close()
         except IOError as e:
-                print "I/O error({0}): {1}".format(e.errno, e.strerror)
+                print("I/O error({0}): {1}".format(e.errno, e.strerror))
                 exit(2)
         return status
 ##########################################################
@@ -408,10 +408,10 @@ def update_server_status(status_file,status,server):
 	try:
                         status_f = open(status_file, "wb")
                         status_f.write(status)
-                        print "Server %s is  set to %s" %(server,status)
+                        print("Server %s is  set to %s" %(server,status))
                         status_f.close()
         except IOError as e:
-                        print "I/O error({0}): {1}".format(e.errno, e.strerror)
+                        print("I/O error({0}): {1}".format(e.errno, e.strerror))
                         exit(2)
         return True
 ##########################################################
